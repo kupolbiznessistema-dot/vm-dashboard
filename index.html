@@ -276,7 +276,7 @@ document.getElementById('forecastContainer').innerHTML = `
 
 const insights = [];
 if(deviation < -5000) insights.push(`<span class="insight-tag tag-red">КРИТИЧНО</span> Отставание составило <strong>${Math.abs(deviation).toLocaleString()} м³</strong>. Темп вывоза упал в ${Math.round(1500/last7DaysAvg)} раза относительно плана. Простой 05.06, 06.06 и 22.06 полностью обнулили прогресс.`);
-if(last7DaysAvg < 1000) insights.push(`<span class="insight-tag tag-yellow">РИСК</span> Средний вывоз за неделю: <strong>${Math.round(last7DaysAvg)} м³</strong>. Это ниже 40% от дневного плана. Необходимо срочно проверить готовность парка самосвалов и состояние haul-road.`);
+if(last7DaysAvg < 1000) insights.push(`<span class="insight-tag tag-yellow">РИСК</span> Средний вывоз за неделю: <strong>${Math.round(last7DaysAvg)} м³</strong>. Это ниже 40% от дневного плана.`);
 insights.push(`<span class="insight-tag tag-blue">ЦЕЛЬ</span> Для выполнения месячного плана осталось вывезти <strong>${(totalMonthPlan - currentFact).toLocaleString()} м³</strong>. Требуемый темп: <strong>${Math.ceil(requiredDaily).toLocaleString()} м³/день</strong> (в ${Math.round(requiredDaily/1500)}x выше плана).`);
 
 document.getElementById('insightsContainer').innerHTML = insights.map(i => `<div class="insight-item"><div class="insight-text">${i}</div></div>`).join('');
