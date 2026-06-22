@@ -42,10 +42,10 @@
   .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
   .header h1 span { color: var(--accent-plan); }
   .header-meta { text-align: right; }
-  .date-badge { font-size: 14px; color: var(--text-muted); }
+  .date-badge { font-size: 14px; color: var(--text-muted); margin-bottom: 2px; }
   .status-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 4px; padding: 4px 10px;
+    margin-top: 6px; padding: 4px 10px;
     background: rgba(248, 113, 113, 0.15); color: var(--accent-fact-bad);
     border: 1px solid rgba(248, 113, 113, 0.3); border-radius: 20px;
     font-size: 12px; font-weight: 600;
@@ -126,6 +126,7 @@
   .tag-red { background: rgba(239,68,68,0.2); color: #fca5a5; }
   .tag-yellow { background: rgba(251,191,36,0.2); color: #fcd34d; }
   .tag-blue { background: rgba(96,165,250,0.2); color: #93c5fd; }
+  .tag-green { background: rgba(16,185,129,0.2); color: #6ee7b7; }
   .insight-text { font-size: 13px; color: #cbd5e1; margin-top: 4px; }
 
   @media (max-width: 900px) {
@@ -142,8 +143,9 @@
       <h1>🚛 <span>Транспортировка</span> | Склад ВМ</h1>
     </div>
     <div class="header-meta">
-      <div class="date-badge">📅 Данные актуальны на: 22.06.2026</div>
-      <div class="status-badge"><span class="status-dot"></span>ОТСТАВАНИЕ ОТ ГРАФИКА</div>
+      <div class="date-badge">📅 Период: 01.06.2026 – 21.06.2026</div>
+      <div class="date-badge">📅 Данные актуальны на: 21.06.2026</div>
+      <div class="status-badge" id="statusBadge"><span class="status-dot" id="statusDot"></span><span id="statusText"></span></div>
     </div>
   </header>
 
@@ -178,31 +180,43 @@
 <script>
 // === ДАННЫЕ ИЗ EXCEL (ТРАНСПОРТИРОВКА) ===
 const dates = Array.from({length: 30}, (_, i) => `${String(i+1).padStart(2,'0')}.06`);
-const planDaily = Array(30).fill(1500);
+const planDaily = Array(30).fill(1050); // План на месяц 31 500 / 30 дней = 1050 м³/день
 const factDaily = [1540,1353,1430,1551,0,0,781,1771,1573,1925,1892,2167,1474,396,979,913,572,605,396,1221,517,0,0,0,0,0,0,0,0,0];
 
-const todayIdx = 21; // 0-based index for 22.06
-const currentFact = factDaily.slice(0, todayIdx+1).reduce((a,b)=>a+b, 0);
-const currentPlan = planDaily.slice(0, todayIdx+1).reduce((a,b)=>a+b, 0);
-const totalMonthPlan = planDaily.reduce((a,b)=>a+b, 0);
+const todayIdx = 20; // 0-based index for 21.06
+const currentFact = factDaily.slice(0, todayIdx+1).reduce((a,b)=>a+b, 0); // 23 056
+const currentPlan = planDaily.slice(0, todayIdx+1).reduce((a,b)=>a+b, 0); // 22 050
+const totalMonthPlan = planDaily.reduce((a,b)=>a+b, 0); // 31 500
 
 // Расчеты
-const deviation = currentFact - currentPlan;
-const completionPct = ((currentFact / currentPlan) * 100).toFixed(1);
-const remainingDays = 30 - (todayIdx + 1);
-const last7DaysAvg = factDaily.slice(15, 22).reduce((a,b)=>a+b, 0) / 7;
-const forecastEnd = currentFact + (last7DaysAvg * remainingDays);
-const forecastPct = ((forecastEnd / totalMonthPlan) * 100).toFixed(1);
-const requiredDaily = (totalMonthPlan - currentFact) / remainingDays;
+const deviation = currentFact - currentPlan; // +1 006
+const completionPct = ((currentFact / currentPlan) * 100).toFixed(1); // 104.6%
+const remainingDays = 30 - (todayIdx + 1); // 9
+const last7DaysAvg = factDaily.slice(todayIdx - 6, todayIdx + 1).reduce((a,b)=>a+b, 0) / 7; // 743
+const forecastEnd = currentFact + (last7DaysAvg * remainingDays); // 29 746
+const forecastPct = ((forecastEnd / totalMonthPlan) * 100).toFixed(1); // 94.4%
+const requiredDaily = (totalMonthPlan - currentFact) / remainingDays; // 939
+
+// === ДИНАМИЧЕСКИЙ СТАТУС ===
+const statusText = deviation > 0 ? (forecastPct >= 95 ? "В ГРАФИКЕ" : "ТРЕБУЕТ ВНИМАНИЯ") : "ОТСТАВАНИЕ ОТ ГРАФИКА";
+const statusColorRgb = deviation > 0 ? (forecastPct >= 95 ? '16, 185, 129' : '251, 191, 36') : '248, 113, 113';
+const statusColorHex = deviation > 0 ? (forecastPct >= 95 ? '#10b981' : '#fbbf24') : '#f87171';
+
+const statusBadge = document.getElementById('statusBadge');
+statusBadge.style.background = `rgba(${statusColorRgb}, 0.15)`;
+statusBadge.style.color = statusColorHex;
+statusBadge.style.borderColor = statusColorHex;
+document.getElementById('statusDot').style.background = statusColorHex;
+document.getElementById('statusText').textContent = statusText;
 
 // === РЕНДЕР KPI ===
 const kpis = [
   { title: "Факт на сегодня", val: currentFact.toLocaleString() + " м³", sub: `из ${currentPlan.toLocaleString()} по плану`, color: "#34d399", accent: "var(--success)" },
-  { title: "Выполнение плана", val: completionPct + "%", sub: "Календарный прогресс: 73.3%", color: deviation < -5000 ? "#f87171" : "#60a5fa", accent: deviation < -5000 ? "var(--danger)" : "var(--accent-plan)" },
-  { title: "Отставание", val: (deviation > 0 ? "+" : "") + deviation.toLocaleString() + " м³", sub: "Накопительный итог", color: "#f87171", accent: "var(--danger)" },
-  { title: "Темп (последние 7 дн.)", val: Math.round(last7DaysAvg) + " м³/день", sub: "План: 1500 м³/день", color: last7DaysAvg < 1500 ? "#fbbf24" : "#34d399", accent: "var(--accent-warn)" },
-  { title: "Прогноз на 30.06", val: Math.round(forecastEnd).toLocaleString() + " м³", sub: `${forecastPct}% от месячного плана`, color: "#60a5fa", accent: "var(--accent-plan)" },
-  { title: "Необходимый темп", val: Math.ceil(requiredDaily).toLocaleString() + " м³/день", sub: "Чтобы закрыть месяц в 100%", color: "#f87171", accent: "var(--danger)" }
+  { title: "Выполнение плана", val: completionPct + "%", sub: `Календарный прогресс: ${((todayIdx+1)/30*100).toFixed(1)}%`, color: deviation > 0 ? "#34d399" : "#60a5fa", accent: deviation > 0 ? "var(--success)" : "var(--accent-plan)" },
+  { title: deviation > 0 ? "Опережение" : "Отставание", val: (deviation > 0 ? "+" : "") + deviation.toLocaleString() + " м³", sub: deviation > 0 ? "Выше плана" : "Накопительное отставание", color: deviation > 0 ? "#34d399" : "#f87171", accent: deviation > 0 ? "var(--success)" : "var(--danger)" },
+  { title: "Темп (последние 7 дн.)", val: Math.round(last7DaysAvg) + " м³/день", sub: "План: 1 050 м³/день", color: last7DaysAvg < 1050 ? "#fbbf24" : "#34d399", accent: last7DaysAvg < 1050 ? "var(--accent-warn)" : "var(--success)" },
+  { title: "Прогноз на 30.06", val: Math.round(forecastEnd).toLocaleString() + " м³", sub: `${forecastPct}% от месячного плана`, color: forecastPct >= 95 ? "#34d399" : "#fbbf24", accent: forecastPct >= 95 ? "var(--success)" : "var(--accent-warn)" },
+  { title: "Необходимый темп", val: Math.ceil(requiredDaily).toLocaleString() + " м³/день", sub: "Чтобы закрыть месяц в 100%", color: requiredDaily > 1050 ? "#f87171" : "#34d399", accent: requiredDaily > 1050 ? "var(--danger)" : "var(--success)" }
 ];
 
 const kpiHTML = kpis.map(k => `
@@ -269,15 +283,28 @@ new Chart(document.getElementById('sCurveChart'), {
 // === FORECAST & INSIGHTS ===
 document.getElementById('forecastContainer').innerHTML = `
   <div class="forecast-row"><span class="f-label">Цель на месяц</span><span class="f-val">${totalMonthPlan.toLocaleString()} м³</span></div>
-  <div class="forecast-row"><span class="f-label">Факт (22.06)</span><span class="f-val">${currentFact.toLocaleString()} м³</span></div>
-  <div class="forecast-row"><span class="f-label">Прогноз (по темпу 7д)</span><span class="f-val" style="color:${forecastPct < 80 ? '#fca5a5' : '#34d399'}">${Math.round(forecastEnd).toLocaleString()} м³</span></div>
-  <div class="forecast-row"><span class="f-label">Вероятность закрытия</span><span class="f-val" style="color:${forecastPct < 80 ? '#fca5a5' : '#34d399'}">~${forecastPct}%</span></div>
+  <div class="forecast-row"><span class="f-label">Факт (21.06)</span><span class="f-val">${currentFact.toLocaleString()} м³</span></div>
+  <div class="forecast-row"><span class="f-label">Прогноз (по темпу 7д)</span><span class="f-val" style="color:${forecastPct < 90 ? '#fca5a5' : forecastPct < 95 ? '#fcd34d' : '#34d399'}">${Math.round(forecastEnd).toLocaleString()} м³</span></div>
+  <div class="forecast-row"><span class="f-label">Вероятность закрытия</span><span class="f-val" style="color:${forecastPct < 90 ? '#fca5a5' : forecastPct < 95 ? '#fcd34d' : '#34d399'}">~${forecastPct}%</span></div>
 `;
 
 const insights = [];
-if(deviation < -5000) insights.push(`<span class="insight-tag tag-red">КРИТИЧНО</span> Отставание составило <strong>${Math.abs(deviation).toLocaleString()} м³</strong>. Темп вывоза упал в ${Math.round(1500/last7DaysAvg)} раза относительно плана. Простой 05.06, 06.06 и 22.06 полностью обнулили прогресс.`);
-if(last7DaysAvg < 1000) insights.push(`<span class="insight-tag tag-yellow">РИСК</span> Средний вывоз за неделю: <strong>${Math.round(last7DaysAvg)} м³</strong>. Это ниже 40% от дневного плана.`);
-insights.push(`<span class="insight-tag tag-blue">ЦЕЛЬ</span> Для выполнения месячного плана осталось вывезти <strong>${(totalMonthPlan - currentFact).toLocaleString()} м³</strong>. Требуемый темп: <strong>${Math.ceil(requiredDaily).toLocaleString()} м³/день</strong> (в ${Math.round(requiredDaily/1500)}x выше плана).`);
+
+if(deviation > 0) {
+  insights.push(`<span class="insight-tag tag-green">ОПЕРЕЖЕНИЕ</span> На текущую дату факт составляет <strong>${currentFact.toLocaleString()} м³</strong>, что на <strong>${deviation.toLocaleString()} м³</strong> выше плана на этот период (${completionPct}%).`);
+} else if(deviation < -5000) {
+  insights.push(`<span class="insight-tag tag-red">КРИТИЧНО</span> Отставание составило <strong>${Math.abs(deviation).toLocaleString()} м³</strong>. Темп вывоза упал в ${Math.round(1050/last7DaysAvg)} раза относительно плана.`);
+}
+
+if(forecastPct < 100) {
+  insights.push(`<span class="insight-tag tag-yellow">ПРОГНОЗ</span> При сохранении текущего темпа (<strong>${Math.round(last7DaysAvg)} м³/день</strong>) к концу месяца будет вывезено <strong>${Math.round(forecastEnd).toLocaleString()} м³</strong> (${forecastPct}% от плана).`);
+}
+
+if(last7DaysAvg < 1050) {
+  insights.push(`<span class="insight-tag tag-red">РИСК</span> Средний вывоз за последние 7 дней (<strong>${Math.round(last7DaysAvg)} м³/день</strong>) ниже планового темпа (<strong>1 050 м³/день</strong>). Для выполнения месячного плана необходимо увеличить вывоз до <strong>${Math.ceil(requiredDaily)} м³/день</strong>.`);
+}
+
+insights.push(`<span class="insight-tag tag-blue">ЦЕЛЬ</span> Для выполнения месячного плана осталось вывезти <strong>${(totalMonthPlan - currentFact).toLocaleString()} м³</strong>. Требуемый темп: <strong>${Math.ceil(requiredDaily).toLocaleString()} м³/день</strong>.`);
 
 document.getElementById('insightsContainer').innerHTML = insights.map(i => `<div class="insight-item"><div class="insight-text">${i}</div></div>`).join('');
 </script>
