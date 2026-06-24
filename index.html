@@ -181,21 +181,21 @@
 // === ДАННЫЕ ИЗ EXCEL (ТРАНСПОРТИРОВКА) ===
 const dates = Array.from({length: 30}, (_, i) => `${String(i+1).padStart(2,'0')}.06`);
 const planDaily = Array(30).fill(1500); // План на сутки 1500 м³
-const factDaily = [1540,1353,1430,1551,0,0,781,1771,1573,1925,1892,2167,1474,396,979,913,572,605,396,1221,517,539,924,535,0,0,0,0,0,0];
+const factDaily = [1540,1353,1430,1551,0,0,781,1771,1573,1925,1892,2167,1474,396,979,913,572,605,396,1221,517,539,924,965,0,0,0,0,0,0];
 
 const todayIdx = 23; // 0-based index for 24.06
-const currentFact = factDaily.slice(0, todayIdx+1).reduce((a,b)=>a+b, 0); // 25 054
+const currentFact = factDaily.slice(0, todayIdx+1).reduce((a,b)=>a+b, 0); // 25 484
 const currentPlan = planDaily.slice(0, todayIdx+1).reduce((a,b)=>a+b, 0); // 36 000
 const totalMonthPlan = 36000; // План на месяц
 
 // Расчеты
-const deviation = currentFact - currentPlan; // -10 946
-const completionPct = ((currentFact / currentPlan) * 100).toFixed(1); // 69.6%
+const deviation = currentFact - currentPlan; // -10 516
+const completionPct = ((currentFact / currentPlan) * 100).toFixed(1); // 70.8%
 const remainingDays = 30 - (todayIdx + 1); // 6
-const last7DaysAvg = factDaily.slice(todayIdx - 6, todayIdx + 1).reduce((a,b)=>a+b, 0) / 7; // 677
-const forecastEnd = currentFact + (last7DaysAvg * remainingDays); // 29 114
-const forecastPct = ((forecastEnd / totalMonthPlan) * 100).toFixed(1); // 80.9%
-const requiredDaily = (totalMonthPlan - currentFact) / remainingDays; // 1 825
+const last7DaysAvg = factDaily.slice(todayIdx - 6, todayIdx + 1).reduce((a,b)=>a+b, 0) / 7; // 738
+const forecastEnd = currentFact + (last7DaysAvg * remainingDays); // 29 912
+const forecastPct = ((forecastEnd / totalMonthPlan) * 100).toFixed(1); // 83.1%
+const requiredDaily = (totalMonthPlan - currentFact) / remainingDays; // 1 753
 
 // === ДИНАМИЧЕСКИЙ СТАТУС ===
 const statusText = deviation > 0 ? (forecastPct >= 95 ? "В ГРАФИКЕ" : "ТРЕБУЕТ ВНИМАНИЯ") : "ОТСТАВАНИЕ ОТ ГРАФИКА";
